@@ -4,20 +4,26 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialogDefaults.containerColor
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,15 +48,24 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CalculaIMCScreen(name: String, modifier: Modifier = Modifier) {
+    var peso by rememberSaveable { mutableStateOf("") }
+    var altura by rememberSaveable { mutableStateOf("") }
+    var resultado by rememberSaveable { mutableStateOf("0.0") }
 
-    var peso by remember { mutableStateOf("") }
-    var altura by remember { mutableStateOf("") }
+
+    val calculaIMC  = {
+        val pesoValor = peso.toDoubleOrNull()
+        val alturaValor = altura.toDoubleOrNull()
+
+        if (pesoValor != null && alturaValor != null) {
+            val imc = pesoValor / (alturaValor * alturaValor)
+            resultado = String.format("%.2f", imc)
+        }
+
+    }
 
     Column {
-        Text(
-            text = "Peso:",
-            modifier = modifier.padding(top = 48.dp, start = 8.dp, end = 8.dp, bottom = 8.dp)
-        )
+
         OutlinedTextField(
             value = peso,
             onValueChange = { peso = it },
@@ -60,10 +75,7 @@ fun CalculaIMCScreen(name: String, modifier: Modifier = Modifier) {
                 .fillMaxWidth()
 
         )
-        Text(
-            text = "Altura:",
-            modifier = modifier.padding(all = 8.dp)
-        )
+
         OutlinedTextField(
             value = altura,
             onValueChange = { altura = it },
@@ -72,30 +84,73 @@ fun CalculaIMCScreen(name: String, modifier: Modifier = Modifier) {
                 .padding(all = 8.dp)
                 .fillMaxWidth()
         )
-        Text(
-            text = "Resultado:",
-            modifier = modifier.padding(all = 8.dp)
+        if (resultado.toDouble() >8 ) {
+            PanelResul(resultado = resultado)
+
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+
         )
-        Text(
-            text = "0.0:",
-            modifier = modifier.padding(all = 8.dp)
-        )
-        Row {
+        {
             Button(
-                onClick = {},
-                modifier = Modifier.padding(all = 8.dp)
+                onClick = calculaIMC,
+                modifier = Modifier
+                    .padding(all = 8.dp)
+                    .weight(1f)
             ) {
                 Text("Calcular")
             }
             Button(
-                onClick = {},
-                modifier = Modifier.padding(all = 8.dp)
+                onClick = {peso = ""; altura = ""; resultado = "0.0"},
+                modifier = Modifier
+                    .padding(all = 8.dp)
+                    .weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary)
+
             ) {
                 Text("Limpar")
             }
         }
     }
 }
+@Composable
+fun PanelResul(resultado: String,
+               modifier: Modifier = Modifier) {
+    Column(
+        modifier = Modifier
+            .padding(all = 8.dp)
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.primary),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+
+    ) {
+
+        Text(
+            text = "Resultado",
+            modifier = Modifier
+                .padding(all = 8.dp)
+        )
+        Text(
+            text = resultado,
+            modifier = Modifier
+                .padding(all = 8.dp),
+            style = MaterialTheme.typography.displayLarge
+        )
+    }
+
+}
+@Preview(showBackground = true)
+@Composable
+fun PanelResulPreview() {
+    CalculaIMCcomposeTheme {
+        PanelResul(resultado = "24.80")
+    }
+}
+
 
 @Preview(showBackground = true)
 @Composable
