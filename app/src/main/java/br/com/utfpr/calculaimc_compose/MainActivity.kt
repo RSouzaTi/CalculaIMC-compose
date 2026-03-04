@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,8 +30,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.KeyboardType // Importado para tipo numérico
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.utfpr.calculaimc_compose.model.imcViewModel
 import br.com.utfpr.calculaimc_compose.ui.theme.CalculaIMCcomposeTheme
-import java.util.Locale // Importado para forçar o formato do ponto
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,36 +51,22 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CalculaIMCScreen(modifier: Modifier = Modifier) {
-    var peso by rememberSaveable { mutableStateOf("") }
-    var altura by rememberSaveable { mutableStateOf("") }
-    var resultado by rememberSaveable { mutableStateOf("0.0") }
-    val focusRequester = remember { FocusRequester() }
+fun CalculaIMCScreen(
+    modifier: Modifier = Modifier,
+    viewModel: imcViewModel = viewModel()
+) {
 
-    val calculaIMC : () -> Unit = {
-        // CORREÇÃO: substitui vírgula por ponto para o parse funcionar sempre
-        val pesoValor = peso.replace(',', '.').toDoubleOrNull()
-        val alturaValor = altura.replace(',', '.').toDoubleOrNull()
+        var peso = viewModel.peso
+        var altura = viewModel.altura
+        var resultado = viewModel.resultado
 
-        if (pesoValor != null && alturaValor != null && alturaValor > 0) {
-            val imc = pesoValor / (alturaValor * alturaValor)
-            // CORREÇÃO: Força Locale.US para garantir que a String use ponto (ex: "24.80")
-            // Isso evita o erro no .toDouble() do IF abaixo
-            resultado = String.format(Locale.US, "%.2f", imc)
-        }
-    }
+    var focusRequester by remember{ mutableStateOf(FocusRequester() ) }
 
-    val limpar : () -> Unit = {
-        peso = ""
-        altura = ""
-        resultado = "0.0"
-        focusRequester.requestFocus()
-    }
 
     Column(modifier = modifier) {
         OutlinedTextField(
             value = peso,
-            onValueChange = { peso = it },
+            onValueChange = { viewModel.onPesoChange( novoPeso = it)},
             label = { Text("Peso em KG") },
             modifier = Modifier
                 .padding(all = 8.dp)
@@ -92,7 +78,7 @@ fun CalculaIMCScreen(modifier: Modifier = Modifier) {
 
         OutlinedTextField(
             value = altura,
-            onValueChange = { altura = it },
+            onValueChange = { viewModel.onAlturaChange(novaAltura = it) },
             label = { Text("Altura em metros") },
             modifier = Modifier
                 .padding(all = 8.dp)
@@ -101,18 +87,28 @@ fun CalculaIMCScreen(modifier: Modifier = Modifier) {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
         )
 
-        // CORREÇÃO: Uso de toDoubleOrNull para evitar crash na interface
-        val valorResultado = resultado.toDoubleOrNull() ?: 0.0
-        if (valorResultado > 0) {
+        if (resultado.toDouble() > 0) {
             PanelResult(resultado = resultado)
         }
 
         PanelButtons(
-            onCalcularClick = calculaIMC,
-            onLimparClick = limpar,
+            onCalcularClick = {viewModel.calculaIMC()},
+            onLimparClick = {
+                viewModel.limpar()
+                            focusRequester.requestFocus()
+            },
             modifier = Modifier
         )
+        Button(
+            onClick = { },
+            modifier = Modifier
+                .padding(all = 8.dp)
+                .fillMaxWidth()
+        ){
+            Text("Sobre o Desenvolvedor")
+        }
     }
+
 }
 
 @Composable
@@ -195,5 +191,31 @@ fun PanelButtonsPreview() {
             onCalcularClick = {},
             onLimparClick = {}
         )
+    }
+}
+@Composable
+fun DeveloperScreen(modifier: Modifier = Modifier) {
+
+    Column (
+        modifier = Modifier
+            .padding(all = 8.dp)
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ){
+        Text(text = "Desenvolvido por:")
+        Text(
+            text = "posmoveis-pb@utfpr.edu.br",
+            style = MaterialTheme.typography.headlineMedium
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DeveloperScrenPreview(modifier: Modifier = Modifier){
+CalculaIMCcomposeTheme() {
+    DeveloperScreen()
+
     }
 }
