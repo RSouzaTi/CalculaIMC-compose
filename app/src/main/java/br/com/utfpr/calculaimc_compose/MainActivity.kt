@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,7 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions // Importado para o teclado
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -27,12 +29,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.text.input.KeyboardType // Importado para tipo numérico
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import br.com.utfpr.calculaimc_compose.model.imcViewModel
 import br.com.utfpr.calculaimc_compose.ui.theme.CalculaIMCcomposeTheme
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,10 +46,55 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CalculaIMCcomposeTheme {
+                val navController = rememberNavController()
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    CalculaIMCScreen(
+                    NavHost(
+                        navController = navController,
+                        startDestination = "home",
                         modifier = Modifier.padding(innerPadding)
-                    )
+                    ) {
+                        composable(
+                            route = "home",
+                            enterTransition = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                                    animationSpec = tween(700)
+                                )
+                            },
+                            exitTransition = {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                                    animationSpec = tween(700)
+                                )
+                            }
+                        ) {
+                            CalculaIMCScreen(
+                                onNavigateToDeveloper = {
+                                    navController.navigate("developer")
+                                }
+                            )
+                        }
+                        composable(
+                            route = "developer",
+                            enterTransition = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                                    animationSpec = tween(700)
+                                )
+                            },
+                            exitTransition = {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                                    animationSpec = tween(700)
+                                )
+                            }
+                        ) {
+                            DeveloperScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -53,26 +104,26 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CalculaIMCScreen(
     modifier: Modifier = Modifier,
-    viewModel: imcViewModel = viewModel()
+    viewModel: imcViewModel = viewModel(),
+    onNavigateToDeveloper: () -> Unit = {}
 ) {
 
-        var peso = viewModel.peso
-        var altura = viewModel.altura
-        var resultado = viewModel.resultado
+    val peso = viewModel.peso
+    val altura = viewModel.altura
+    val resultado = viewModel.resultado
 
-    var focusRequester by remember{ mutableStateOf(FocusRequester() ) }
+    val focusRequester = remember { FocusRequester() }
 
 
     Column(modifier = modifier) {
         OutlinedTextField(
             value = peso,
-            onValueChange = { viewModel.onPesoChange( novoPeso = it)},
+            onValueChange = { viewModel.onPesoChange(novoPeso = it) },
             label = { Text("Peso em KG") },
             modifier = Modifier
                 .padding(all = 8.dp)
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
-            // ADICIONADO: Define o teclado como numérico decimal
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
         )
 
@@ -83,28 +134,27 @@ fun CalculaIMCScreen(
             modifier = Modifier
                 .padding(all = 8.dp)
                 .fillMaxWidth(),
-            // ADICIONADO: Define o teclado como numérico decimal
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
         )
 
-        if (resultado.toDouble() > 0) {
+        if (resultado.toDoubleOrNull() ?: 0.0 > 0) {
             PanelResult(resultado = resultado)
         }
 
         PanelButtons(
-            onCalcularClick = {viewModel.calculaIMC()},
+            onCalcularClick = { viewModel.calculaIMC() },
             onLimparClick = {
                 viewModel.limpar()
-                            focusRequester.requestFocus()
+                focusRequester.requestFocus()
             },
             modifier = Modifier
         )
         Button(
-            onClick = { },
+            onClick = onNavigateToDeveloper,
             modifier = Modifier
                 .padding(all = 8.dp)
                 .fillMaxWidth()
-        ){
+        ) {
             Text("Sobre o Desenvolvedor")
         }
     }
@@ -171,7 +221,9 @@ fun PanelButtons(
 @Composable
 fun CalculaIMCScreenPreview() {
     CalculaIMCcomposeTheme {
-        CalculaIMCScreen()
+        CalculaIMCScreen(
+            onNavigateToDeveloper = {}
+        )
     }
 }
 
@@ -193,29 +245,32 @@ fun PanelButtonsPreview() {
         )
     }
 }
-@Composable
-fun DeveloperScreen(modifier: Modifier = Modifier) {
 
-    Column (
-        modifier = Modifier
-            .padding(all = 8.dp)
-            .fillMaxSize(),
+@Composable
+fun DeveloperScreen(
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit = {}
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
-    ){
+    ) {
         Text(text = "Desenvolvido por:")
         Text(
             text = "posmoveis-pb@utfpr.edu.br",
             style = MaterialTheme.typography.headlineMedium
         )
+        Button(onClick = onBack, modifier = Modifier.padding(top = 20.dp)) {
+            Text("Voltar")
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun DeveloperScrenPreview(modifier: Modifier = Modifier){
-CalculaIMCcomposeTheme() {
-    DeveloperScreen()
-
+fun DeveloperScrenPreview() {
+    CalculaIMCcomposeTheme {
+        DeveloperScreen()
     }
 }
